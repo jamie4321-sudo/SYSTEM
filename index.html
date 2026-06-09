@@ -430,6 +430,8 @@ tr.clickable{cursor:pointer}tr.clickable:hover td{background:var(--surface-low)}
           </div>
           <div class="nav-group-body">
             <div class="nav-item" data-page="schedule"><span class="icon">📅</span>일정 관리</div>
+            <div class="nav-item" data-page="report"><span class="icon">📊</span>운영 보고</div>
+            <div class="nav-item" data-page="billing"><span class="icon">💰</span>청구 관리</div>
             <div class="nav-item" data-page="notes"><span class="icon">📝</span>노트 기록</div>
             <div class="nav-item" data-page="clients"><span class="icon">🏢</span>거래처 관리</div>
             <div class="nav-item" data-page="kpi"><span class="icon">🎯</span>2026 KPI</div>
@@ -934,6 +936,212 @@ tr.clickable{cursor:pointer}tr.clickable:hover td{background:var(--surface-low)}
           <div id="schedule-day-panel" style="display:none"><div id="schedule-day-label"></div><div id="schedule-day-cnt"></div><div id="schedule-day-list"></div><div id="schedule-inline-rows"></div><button id="schedule-add-row-btn"></button></div>
         </div>
 
+        <!-- ★ 운영 보고 -->
+        <div class="section" id="page-report">
+          <!-- 페이지 헤더 -->
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">운영 보고</h1>
+              <p class="page-sub">주간 보고 및 월간 보고를 작성하고 2026년 6월부터 누적 관리합니다.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openReportModal()">+ 보고서 작성</button>
+          </div>
+
+          <!-- 탭 + 연도/월 네비 통합 바 -->
+          <div style="background:var(--white);border:1.5px solid var(--outline);border-radius:var(--r-md);padding:12px 16px;margin-bottom:16px">
+            <!-- 탭 버튼 -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--outline)">
+              <button class="report-tab-btn" id="rpt-nav-weekly" data-rtab="weekly" onclick="switchReportTab('weekly',this)"
+                style="padding:7px 18px;border-radius:99px;border:2px solid var(--black);background:var(--black);color:var(--yellow);font-size:.8rem;font-weight:900;cursor:pointer;transition:.15s">
+                📋 주간 보고
+              </button>
+              <button class="report-tab-btn" id="rpt-nav-monthly" data-rtab="monthly" onclick="switchReportTab('monthly',this)"
+                style="padding:7px 18px;border-radius:99px;border:2px solid var(--outline);background:var(--white);color:var(--text-sub);font-size:.8rem;font-weight:900;cursor:pointer;transition:.15s">
+                📊 월간 보고
+              </button>
+              <span id="report-week-cnt" style="font-size:.74rem;color:var(--text-muted);font-weight:700;align-self:center;margin-left:auto"></span>
+              <span id="report-month-cnt" style="font-size:.74rem;color:var(--text-muted);font-weight:700;align-self:center;display:none"></span>
+            </div>
+            <!-- 연도 탭 (주간/월간 공용) -->
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px" id="report-year-tabs"></div>
+            <!-- 월 탭 (주간 보고용만 표시) -->
+            <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:6px" id="report-month-tabs"></div>
+          </div>
+
+          <!-- 주간 보고 목록 -->
+          <div id="report-tab-weekly">
+            <div id="report-weekly-list" style="display:flex;flex-direction:column;gap:14px"></div>
+          </div>
+
+          <!-- 월간 보고 목록 -->
+          <div id="report-tab-monthly" style="display:none">
+            <div id="report-monthly-list" style="display:flex;flex-direction:column;gap:14px"></div>
+          </div>
+        
+        <!-- ★ 청구 관리 -->
+        <div class="section" id="page-billing">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">청구 관리</h1>
+              <p class="page-sub" style="margin-top:2px">월별 청구 배치표 — 청구/미청구 크루 현황 및 장애고용율을 관리합니다.</p>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-outline" onclick="exportBillingReport()">📤 내보내기</button>
+              <button class="btn btn-primary" onclick="openBillingRecordModal()">+ 기록 등록</button>
+            </div>
+          </div>
+
+          <!-- 상단 필터 바: 연도 + 월 탭 -->
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+            <div style="display:flex;gap:4px" id="billing-year-tabs"></div>
+            <div style="width:1px;height:18px;background:var(--outline);margin:0 2px"></div>
+            <div style="display:flex;gap:3px;flex-wrap:wrap" id="billing-month-tabs"></div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+              <span id="billing-summary-badge" style="font-size:.74rem;color:var(--text-muted);font-weight:700"></span>
+            </div>
+          </div>
+
+          <!-- 메인 그리드: 좌(배치표) + 우(요약 패널) -->
+          <div style="display:grid;grid-template-columns:1fr 260px;gap:14px;align-items:start">
+
+            <!-- ── 좌: 배치표 영역 ── -->
+            <div>
+              <!-- 월 표시 -->
+              <div style="font-size:.9rem;font-weight:900;color:var(--text-main);margin-bottom:8px" id="billing-month-label"></div>
+
+              <!-- 청구 표 -->
+              <div style="margin-bottom:14px">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;background:var(--black);border-radius:var(--r-sm) var(--r-sm) 0 0">
+                  <span style="font-size:.72rem;font-weight:900;color:rgba(255,255,255,.5);letter-spacing:.06em">청구</span>
+                  <div style="display:flex;gap:5px">
+                    <button id="billing-edit-btn" onclick="toggleBillingEditMode()"
+                      style="padding:3px 11px;border:1.5px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.6);font-size:.72rem;font-weight:900;cursor:pointer;border-radius:4px;transition:.15s">✏️ 수정 모드</button>
+                    <button id="billing-save-btn" onclick="saveBillingData()"
+                      style="display:none;padding:3px 11px;border:1.5px solid var(--yellow);background:var(--yellow);color:var(--black);font-size:.72rem;font-weight:900;cursor:pointer;border-radius:4px">💾 저장</button>
+                  </div>
+                </div>
+                <div style="overflow-x:auto">
+                  <table id="billing-table" style="width:100%;border-collapse:collapse;font-size:.8rem;border:1px solid #ddd;border-top:none">
+                    <thead>
+                      <tr style="background:#f0f0f0;border-bottom:2px solid #999">
+                        <th style="padding:7px 12px;text-align:left;border-right:1px solid #ccc;font-weight:900;min-width:90px">청구처</th>
+                        <th style="padding:7px 10px;text-align:left;border-right:1px solid #ccc;font-weight:900;min-width:70px">파트</th>
+                        <th style="padding:7px 10px;text-align:left;border-right:1px solid #ccc;font-weight:900;min-width:80px">직무</th>
+                        <th style="padding:7px 10px;text-align:left;border-right:1px solid #ccc;font-weight:700">크루</th>
+                        <th style="padding:7px 10px;text-align:center;border-right:1px solid #ccc;font-weight:900;min-width:55px">인원수</th>
+                        <th style="padding:7px 10px;text-align:center;border-right:1px solid #ccc;font-weight:900;min-width:45px">mm</th>
+                        <th style="padding:7px 10px;text-align:left;font-weight:700;min-width:100px">비고</th>
+                        <th style="padding:7px 8px;text-align:center;font-weight:700;min-width:50px;width:50px"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="billing-table-body">
+                      <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);font-size:.84rem">월을 선택하세요</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 미청구 표 -->
+              <div id="billing-unbilled-wrap">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;background:#555;border-radius:var(--r-sm) var(--r-sm) 0 0">
+                  <span style="font-size:.72rem;font-weight:900;color:rgba(255,255,255,.6);letter-spacing:.06em">미청구</span>
+                  <button onclick="openBillingRecordModal(null,'unbilled')"
+                    style="padding:2px 9px;border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.5);font-size:.7rem;font-weight:800;cursor:pointer;border-radius:3px">+ 추가</button>
+                </div>
+                <div style="overflow-x:auto">
+                  <table style="width:100%;border-collapse:collapse;font-size:.8rem;border:1px solid #ddd;border-top:none">
+                    <thead>
+                      <tr style="background:#f0f0f0;border-bottom:2px solid #999">
+                        <th style="padding:6px 12px;text-align:left;border-right:1px solid #ccc;font-weight:900;min-width:90px">청구처</th>
+                        <th style="padding:6px 10px;text-align:left;border-right:1px solid #ccc;font-weight:900;min-width:70px">파트</th>
+                        <th style="padding:6px 10px;text-align:left;border-right:1px solid #ccc;font-weight:900;min-width:80px">직무</th>
+                        <th style="padding:6px 10px;text-align:left;border-right:1px solid #ccc;font-weight:700">크루</th>
+                        <th style="padding:6px 10px;text-align:center;border-right:1px solid #ccc;font-weight:900;min-width:55px">인원수</th>
+                        <th style="padding:6px 10px;text-align:center;border-right:1px solid #ccc;font-weight:900;min-width:45px">mm</th>
+                        <th style="padding:6px 10px;text-align:left;font-weight:700;min-width:100px">비고</th>
+                        <th style="padding:6px 8px;text-align:center;font-weight:700;min-width:50px;width:50px"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="billing-unbilled-body">
+                      <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted);font-size:.82rem">미청구 인원 없음</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 입사 / 퇴사 (하단) -->
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px">
+                <!-- 입사 -->
+                <div style="border:1px solid #7DC99A;border-radius:var(--r-sm);overflow:hidden">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:#EDF7F1;border-bottom:1px solid #7DC99A">
+                    <span style="font-size:.74rem;font-weight:900;color:#1A6B3C">입사</span>
+                    <button onclick="addBillingJoinRow()" style="font-size:.64rem;border:1px solid #7DC99A;background:transparent;color:#2E7D52;padding:1px 7px;border-radius:3px;cursor:pointer">+ 추가</button>
+                  </div>
+                  <div id="billing-join-list" style="padding:4px 0;min-height:36px">
+                    <div style="padding:6px 12px;font-size:.76rem;color:#7DC99A" id="billing-join-empty">없음</div>
+                  </div>
+                </div>
+                <!-- 퇴사 -->
+                <div style="border:1px solid #ba1a1a;border-radius:var(--r-sm);overflow:hidden">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:#ffdad6;border-bottom:1px solid rgba(186,26,26,.3)">
+                    <span style="font-size:.74rem;font-weight:900;color:#ba1a1a">퇴사</span>
+                    <button onclick="addBillingResignRow()" style="font-size:.64px;border:1px solid #ba1a1a;background:transparent;color:#ba1a1a;padding:1px 7px;border-radius:3px;cursor:pointer">+ 추가</button>
+                  </div>
+                  <div id="billing-resign-list" style="padding:4px 0;min-height:36px">
+                    <div style="padding:6px 12px;font-size:.76rem;color:#ba1a1a" id="billing-resign-empty">없음</div>
+                  </div>
+                </div>
+                <!-- 비고 -->
+                <div style="border:1px solid #ddd;border-radius:var(--r-sm);overflow:hidden">
+                  <div style="padding:6px 12px;font-size:.74rem;font-weight:900;background:#f8f8f8;border-bottom:1px solid #ddd">비고</div>
+                  <textarea id="billing-note-input" placeholder="비고 사항 입력…"
+                    style="width:100%;border:none;padding:7px 12px;font-size:.8rem;font-family:inherit;resize:vertical;min-height:60px;line-height:1.65;outline:none;color:var(--text-main);background:var(--white);box-sizing:border-box"
+                    onblur="saveBillingNote()"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── 우: 요약 패널 ── -->
+            <div style="display:flex;flex-direction:column;gap:10px;position:sticky;top:12px">
+
+              <!-- TO / 인원 요약 -->
+              <div style="border:1px solid #ddd;border-radius:var(--r-sm);overflow:hidden;background:var(--white)">
+                <div style="background:var(--black);padding:8px 12px;font-size:.74rem;font-weight:900;color:rgba(255,255,255,.6);letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center">
+                  <span>스낵앤가든사업팀 TO</span>
+                  <input type="number" id="billing-to-input" value="34" min="0"
+                    style="width:44px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:3px;padding:1px 5px;font-size:.76rem;font-weight:900;text-align:center;color:var(--yellow)"
+                    onchange="saveBillingTO(this.value)"/>
+                </div>
+                <div id="billing-to-summary" style="font-size:.8rem">
+                  <!-- JS로 렌더 -->
+                </div>
+              </div>
+
+              <!-- 장애고용율 -->
+              <div style="border:1px solid #ddd;border-radius:var(--r-sm);overflow:hidden;background:var(--white)">
+                <div style="padding:7px 12px;font-size:.72rem;font-weight:900;color:#ba1a1a;background:#f8f8f8;border-bottom:1px solid #ddd;font-style:italic">
+                  장애고용율
+                </div>
+                <div id="billing-dis-rate" style="padding:10px 12px">
+                  <!-- JS로 렌더 -->
+                </div>
+              </div>
+
+              <!-- 월별 장애고용율 테이블 -->
+              <div style="border:1px solid #ddd;border-radius:var(--r-sm);overflow:hidden;background:var(--white)">
+                <div style="padding:7px 12px;font-size:.72rem;font-weight:900;color:#ba1a1a;background:#f8f8f8;border-bottom:1px solid #ddd">
+                  <span id="billing-rate-year-label">2026</span>년 스낵큐레이션파트 장애고용율
+                </div>
+                <div style="overflow-x:auto;padding:8px" id="billing-monthly-rate">
+                  <!-- JS로 렌더 -->
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+
         <!-- ★ 노트 / 지식관리 -->
         <div class="section" id="page-notes">
           <!-- 탭 헤더 -->
@@ -1309,6 +1517,119 @@ tr.clickable{cursor:pointer}tr.clickable:hover td{background:var(--surface-low)}
   </div>
 </div>
 
+<!-- ★ 운영 보고 모달 -->
+<div class="modal-overlay" id="modal-report">
+  <div class="modal" style="width:min(820px,100%);max-height:92vh">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-report-title">주간 보고 작성</span>
+      <button class="modal-close" onclick="closeModal('modal-report')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 24px 28px">
+      <!-- 유형 선택 -->
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button id="rpt-type-weekly" onclick="selectReportType('weekly')"
+          style="flex:1;padding:9px 0;border-radius:var(--r-sm);border:2px solid var(--black);background:var(--black);color:var(--yellow);font-size:.82rem;font-weight:900;cursor:pointer;transition:.15s">
+          📋 주간 보고
+        </button>
+        <button id="rpt-type-monthly" onclick="selectReportType('monthly')"
+          style="flex:1;padding:9px 0;border-radius:var(--r-sm);border:2px solid var(--outline);background:var(--white);color:var(--text-sub);font-size:.82rem;font-weight:900;cursor:pointer;transition:.15s">
+          📊 월간 보고
+        </button>
+      </div>
+      <input type="hidden" id="rpt-type" value="weekly"/>
+      <input type="hidden" id="rpt-id" value=""/>
+
+      <!-- ── 주간 보고 폼 ── -->
+      <div id="rpt-weekly-form">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="field"><label>보고일 *</label><input type="date" id="rpt-date" style="width:100%"/></div>
+          <div class="field"><label>기간 시작</label><input type="date" id="rpt-period-start" style="width:100%"/></div>
+          <div class="field"><label>기간 종료</label><input type="date" id="rpt-period-end" style="width:100%"/></div>
+        </div>
+
+        <!-- 1. 인력 현황 -->
+        <div style="background:var(--black);border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px">
+          <div style="font-size:.74rem;font-weight:900;color:var(--yellow);letter-spacing:.06em;margin-bottom:10px">1. 인력 현황 및 변동 사항</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+            <div class="field">
+              <label style="color:rgba(255,255,255,.55)">총원</label>
+              <input id="rpt-total" type="number" placeholder="36" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:var(--white)"/>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <div class="field"><label style="color:rgba(255,255,255,.55)">장애</label><input id="rpt-disabled" type="number" placeholder="23" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:var(--white)"/></div>
+              <div class="field"><label style="color:rgba(255,255,255,.55)">비장애</label><input id="rpt-nondisabled" type="number" placeholder="13" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:var(--white)"/></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+            <div class="field"><label style="color:rgba(255,255,255,.55)">🟡 스낵 (명)</label><input id="rpt-snack-cnt" type="number" placeholder="26" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:var(--white)"/></div>
+            <div class="field"><label style="color:rgba(255,255,255,.55)">🟢 가든 (명)</label><input id="rpt-garden-cnt" type="number" placeholder="7" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:var(--white)"/></div>
+            <div class="field"><label style="color:rgba(255,255,255,.55)">🔵 총무지원 (명)</label><input id="rpt-support-cnt" type="number" placeholder="3" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:var(--white)"/></div>
+          </div>
+          <div class="field">
+            <label style="color:rgba(255,255,255,.55)">변동 사항 (입퇴사, 이동 등)</label>
+            <textarea id="rpt-hr-change" rows="2" placeholder="예: 스낵 파트 맷 5/26 입사" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:var(--white);width:100%;min-height:50px"></textarea>
+          </div>
+        </div>
+
+        <!-- 2. 주요 운영 이슈 및 성과 -->
+        <div style="border:1.5px solid var(--outline);border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px">
+          <div style="font-size:.74rem;font-weight:900;color:var(--text-main);letter-spacing:.06em;margin-bottom:10px">2. 주요 운영 이슈 및 성과</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div class="field">
+              <label style="color:#7A5F00">🟡 스낵</label>
+              <textarea id="rpt-issue-snack" rows="6" style="width:100%;min-height:120px;font-size:.82rem;line-height:1.7;border:1.5px solid var(--snack-border);background:var(--snack-bg)" placeholder="• 오아시스 큐레이션 조정&#10;• 라면존 이벤트 논의&#10;• ESG 다회용컵 f/up"></textarea>
+            </div>
+            <div class="field">
+              <label style="color:#1B5E35">🟢 가든</label>
+              <textarea id="rpt-issue-garden" rows="6" style="width:100%;min-height:120px;font-size:.82rem;line-height:1.7;border:1.5px solid var(--garden-border);background:var(--garden-bg)" placeholder="• 아지트 하절기 스케줄링&#10;• 게임즈 식물 교체 1건&#10;• 인턴크루 수습 진행 중"></textarea>
+            </div>
+            <div class="field">
+              <label style="color:#1A4F7A">🔵 총무지원</label>
+              <textarea id="rpt-issue-support" rows="6" style="width:100%;min-height:120px;font-size:.82rem;line-height:1.7;border:1.5px solid var(--support-border);background:var(--support-bg)" placeholder="• PC지급 5건/반납 2건&#10;• 설치 16건&#10;• 트러블슈팅 0건"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 예정 업무 -->
+        <div style="border:1.5px solid var(--outline);border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px">
+          <div style="font-size:.74rem;font-weight:900;color:var(--text-main);letter-spacing:.06em;margin-bottom:10px">3. 예정 업무 (다음 주차)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div class="field"><label style="color:#7A5F00">🟡 스낵</label><textarea id="rpt-plan-snack" rows="5" style="width:100%;min-height:100px;font-size:.82rem;line-height:1.65;border:1.5px solid var(--snack-border);background:var(--snack-bg)" placeholder="예정 업무 입력…"></textarea></div>
+            <div class="field"><label style="color:#1B5E35">🟢 가든</label><textarea id="rpt-plan-garden" rows="5" style="width:100%;min-height:100px;font-size:.82rem;line-height:1.65;border:1.5px solid var(--garden-border);background:var(--garden-bg)" placeholder="예정 업무 입력…"></textarea></div>
+            <div class="field"><label style="color:#1A4F7A">🔵 총무지원</label><textarea id="rpt-plan-support" rows="5" style="width:100%;min-height:100px;font-size:.82rem;line-height:1.65;border:1.5px solid var(--support-border);background:var(--support-bg)" placeholder="예정 업무 입력…"></textarea></div>
+          </div>
+        </div>
+
+        <!-- 4. 기타 -->
+        <div class="field">
+          <label>기타 (HRD, 행사, 특이사항 등)</label>
+          <textarea id="rpt-etc" rows="3" style="width:100%;min-height:60px;font-size:.84rem;line-height:1.7" placeholder="HRD 참여, 외부 방문, 특이사항 등…"></textarea>
+        </div>
+      </div>
+
+      <!-- ── 월간 보고 폼 ── -->
+      <div id="rpt-monthly-form" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div class="field"><label>보고 년월 *</label><input type="month" id="rpt-month" style="width:100%"/></div>
+          <div class="field"><label>보고일</label><input type="date" id="rpt-month-date" style="width:100%"/></div>
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <label>월간 종합 성과 및 이슈</label>
+          <textarea id="rpt-month-content" rows="8" style="width:100%;min-height:160px;font-size:.86rem;line-height:1.75" placeholder="월간 성과, 주요 이슈, KPI 달성 현황 등을 자유롭게 작성하세요…"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field"><label style="color:var(--garden-text)">✅ 주요 달성 사항</label><textarea id="rpt-month-achieve" rows="4" style="width:100%;min-height:80px;border:1.5px solid var(--garden-border);background:var(--garden-bg);font-size:.82rem;line-height:1.65" placeholder="이 달 잘 된 것, 달성된 목표…"></textarea></div>
+          <div class="field"><label style="color:var(--snack-text)">🔧 개선 필요 / 다음 달 과제</label><textarea id="rpt-month-improve" rows="4" style="width:100%;min-height:80px;border:1.5px solid var(--snack-border);background:var(--snack-bg);font-size:.82rem;line-height:1.65" placeholder="다음 달에 해결해야 할 것…"></textarea></div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="closeModal('modal-report')">취소</button>
+        <button class="btn btn-primary" onclick="saveReport()" style="padding:9px 28px">💾 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="toast-container"></div>
 
 <!-- ★ 공휴일 설정 모달 -->
@@ -1632,7 +1953,7 @@ function toggleNavGroup(id) {
 // 활성 페이지가 속한 그룹 자동 열기
 function openNavGroupForPage(page) {
   const crewPages = ['crews','interviews','evaluations','issues','attendance','education','hrhistory'];
-  const opsPages  = ['schedule','notes','clients','kpi'];
+  const opsPages  = ['schedule','notes','clients','kpi','report','billing'];
   const sysPages  = ['notifications','activitylog','usermgmt'];
   if (crewPages.includes(page)) {
     document.getElementById('navg-crew')?.classList.add('open');
@@ -1642,7 +1963,7 @@ function openNavGroupForPage(page) {
     document.getElementById('navg-sys')?.classList.add('open');
   }
 }
-const PAGE_TITLES={dashboard:'대시보드',crews:'크루 목록',interviews:'면담 & 근무기록',evaluations:'성장 평가',issues:'이슈 기록',attendance:'근태 요약',education:'교육 관련',hrhistory:'인사 변동',notifications:'알림 / 리마인드',activitylog:'활동 로그',usermgmt:'사용자 관리','crew-detail':'크루 상세',kpi:'2026 KPI',clients:'거래처 관리',todos:'할일 관리',schedule:'일정 관리',notes:'노트 기록'};
+const PAGE_TITLES={dashboard:'대시보드',crews:'크루 목록',interviews:'면담 & 근무기록',evaluations:'성장 평가',issues:'이슈 기록',attendance:'근태 요약',education:'교육 관련',hrhistory:'인사 변동',notifications:'알림 / 리마인드',activitylog:'활동 로그',usermgmt:'사용자 관리','crew-detail':'크루 상세',kpi:'2026 KPI',clients:'거래처 관리',todos:'할일 관리',schedule:'일정 관리',notes:'노트 기록',report:'운영 보고',billing:'청구 관리'};
 function isSuperAdmin(){return STATE.user&&STATE.user.role==='super';}
 /* ══ GAS 연결 / 데모 모드 자동 감지 ══
    GAS 웹앱 환경: google.script.run 실제 호출
@@ -1672,6 +1993,26 @@ function _demoCall(fn, ...args) {
         res(JSON.parse(localStorage.getItem('sg_schedules') || '[]'));
       } else if (fn === 'getNotes') {
         res(JSON.parse(localStorage.getItem('sg_notes') || '[]'));
+      } else if (fn === 'getReports') {
+        res(JSON.parse(localStorage.getItem('sg_reports') || '[]'));
+      } else if (fn === 'saveReport') {
+        try {
+          const data = args[0] || {};
+          const existing = JSON.parse(localStorage.getItem('sg_reports') || '[]');
+          const id = data.id || ('rpt_demo_' + Date.now());
+          data.id = id;
+          const idx = existing.findIndex(x => x.id === id);
+          if (idx >= 0) existing[idx] = data; else existing.push(data);
+          localStorage.setItem('sg_reports', JSON.stringify(existing));
+          res({ success: true, id });
+        } catch(e) { res({ success: true, id: 'rpt_demo_' + Date.now() }); }
+      } else if (fn === 'deleteReport') {
+        try {
+          const id = args[0];
+          const existing = JSON.parse(localStorage.getItem('sg_reports') || '[]');
+          localStorage.setItem('sg_reports', JSON.stringify(existing.filter(x => x.id !== id)));
+          res({ success: true });
+        } catch(e) { res({ success: true }); }
       } else if (fn === 'getSettlements') {
         res(JSON.parse(localStorage.getItem('sg_settlements') || '[]'));
       } else if (fn === 'saveScheduleGAS') {
@@ -1765,6 +2106,30 @@ function _demoCall(fn, ...args) {
           localStorage.setItem('sg_settlements', JSON.stringify(existing.filter(x => x['정산ID'] !== id && x.id !== id)));
           res({ success: true });
         } catch(e) { res({ success: true }); }
+      } else if (fn === 'getBillingRecords') {
+        try {
+          const ym = args[0] || '';
+          const all = JSON.parse(localStorage.getItem('sg_billing_all') || '[]');
+          res(ym ? all.filter(r => r.ym === ym) : all);
+        } catch(e) { res([]); }
+      } else if (fn === 'saveBillingRecord') {
+        try {
+          const data = args[0] || {};
+          const all = JSON.parse(localStorage.getItem('sg_billing_all') || '[]');
+          const id = data.id || ('bl_demo_' + Date.now());
+          data.id = id;
+          const idx = all.findIndex(x => x.id === id);
+          if (idx >= 0) all[idx] = data; else all.push(data);
+          localStorage.setItem('sg_billing_all', JSON.stringify(all));
+          res({ success: true, id });
+        } catch(e) { res({ success: true, id: 'bl_demo_' + Date.now() }); }
+      } else if (fn === 'deleteBillingRecord') {
+        try {
+          const id = args[0];
+          const all = JSON.parse(localStorage.getItem('sg_billing_all') || '[]');
+          localStorage.setItem('sg_billing_all', JSON.stringify(all.filter(x => x.id !== id)));
+          res({ success: true });
+        } catch(e) { res({ success: true }); }
       } else if (fn === 'saveCrewSnapshot') {
         try {
           const data = args[0] || {};
@@ -1838,7 +2203,7 @@ function renderTable(headers,rows,rowMapper,onClickFn,onDeleteFn,onEditFn){if(!r
 async function doLogin(){const email=document.getElementById('login-email').value.trim();const pw=document.getElementById('login-pw').value;if(!email||!pw){toast('이메일과 비밀번호를 입력하세요.','error');return;}try{const res=await call('login',email,pw);if(!res.success){toast(res.message,'error');return;}STATE.user=res.user;const ini=res.user.name.charAt(0);['sidebar-avatar','topbar-avatar'].forEach(id=>document.getElementById(id).textContent=ini);document.getElementById('sidebar-name').textContent=res.user.name;document.getElementById('sidebar-role').textContent={super:'슈퍼관리자',admin:'팀관리자',viewer:'일반열람자'}[res.user.role]||res.user.role;applyRoleUI(res.user.role);document.getElementById('login-screen').style.display='none';document.getElementById('app').style.display='block';navigate('dashboard');}catch(e){toast('로그인 오류: '+e.message,'error');}}
 function doLogout(){STATE.user=null;document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';}
 function navigate(page){if(!isSuperAdmin()&&['interviews','evaluations','issues'].includes(page)){toast('접근 권한이 없습니다.','error');return;}document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));const sec=document.getElementById('page-'+page);if(sec)sec.classList.add('active');const nav=document.querySelector(`[data-page="${page}"]`);if(nav)nav.classList.add('active');document.getElementById('topbar-title').textContent=PAGE_TITLES[page]||page;openNavGroupForPage(page);closeSidebar();loadPage(page);}
-async function loadPage(page){const map={dashboard:loadDashboard,crews:loadCrews,interviews:loadInterviews,evaluations:loadEvaluations,issues:loadIssues,attendance:loadAttendance,education:loadEducation,hrhistory:loadHrHistory,notifications:loadNotifications,activitylog:loadActivityLog,usermgmt:loadUsers,kpi:loadKpi,clients:loadClients,todos:loadTodos,schedule:loadSchedule,notes:loadNotes};if(map[page])await map[page]();}
+async function loadPage(page){const map={dashboard:loadDashboard,crews:loadCrews,interviews:loadInterviews,evaluations:loadEvaluations,issues:loadIssues,attendance:loadAttendance,education:loadEducation,hrhistory:loadHrHistory,notifications:loadNotifications,activitylog:loadActivityLog,usermgmt:loadUsers,kpi:loadKpi,clients:loadClients,todos:loadTodos,schedule:loadSchedule,notes:loadNotes,report:loadReports,billing:loadBilling};if(map[page])await map[page]();}
 document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>navigate(n.dataset.page)));
 // 데모 모드 배너 표시
 if (!_IS_GAS) {
@@ -2072,8 +2437,6 @@ function checkBirthdayAlerts(crews){
   return alerts;
 }
 let _dashLoading = false;
-  renderDashTodos();
-  renderDashSchedules();
 async function loadDashboard(){
   if(_dashLoading) return;
   _dashLoading = true;
@@ -4112,17 +4475,23 @@ function normalizeSchedule(s) {
     return '';
   }
 
+  const _schId   = s['일정ID'] || s.id || '';
+  const _schDate = cleanDate(s['날짜'] || s.date);
+  const _gasDone = s['완료여부'] === 'Y' || s.done === true || s.done === 'true';
+  // ★ localStorage done 상태 우선 적용
+  //    GAS가 'N'으로 응답해도 로컬에서 체크한 기록이 있으면 완료 유지
+  const _localDone = (_schId && _schDate) ? _loadSchDone(_schDate, _schId) : false;
   return {
-    id:        s['일정ID']   || s.id       || '',
+    id:        _schId,
     title:     s['제목']     || s.title    || '',
-    date:      cleanDate(s['날짜']   || s.date),
+    date:      _schDate,
     time:      cleanTime(s['시작시간'] || s.time),
     endTime:   cleanTime(s['종료시간'] || s.endTime),
     category:  s['카테고리'] || s.category || '리더',
     place:     s['장소']     || s.place    || '',
     attendees: s['참석자']   || s.attendees|| '',
     memo:      s['메모']     || s.memo     || '',
-    done:      s['완료여부'] === 'Y' || s.done === true || s.done === 'true' || false,
+    done:      _gasDone || _localDone,
   };
 }
 
@@ -4451,6 +4820,8 @@ async function toggleScheduleDone(id) {
   const s = STATE.schedules.find(x => x.id === id);
   if (!s) return;
   s.done = !s.done;
+  // ★ localStorage에 즉시 영구 저장 (로그인 후에도 유지)
+  _saveSchDone(s.date, id, s.done);
   // 즉시 UI 반영 (재렌더 없이)
   const rowEl   = document.getElementById('wr-item-'+id);
   const checkEl = rowEl?.querySelector('.sch-check');
@@ -5652,6 +6023,1039 @@ function checkAnniversaryAlerts(crews) {
   });
   return alerts;
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   ★ 운영 보고 (REPORTS) - localStorage 저장
+══════════════════════════════════════════════════════════════ */
+const REPORT_START_YEAR = 2026;
+let _reportTab   = 'weekly';
+let _reportYear  = new Date().getFullYear() < REPORT_START_YEAR ? REPORT_START_YEAR : new Date().getFullYear();
+let _reportMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+
+async function loadReports() {
+  // GAS 연결 시 시트에서, 미연결 시 localStorage에서 로드
+  try {
+    const res = await call('getReports');
+    if (Array.isArray(res)) {
+      STATE.reports = res;
+      // localStorage에도 동기화 (오프라인 폴백용)
+      localStorage.setItem('sg_reports', JSON.stringify(STATE.reports));
+    } else {
+      throw new Error('not array');
+    }
+  } catch(e) {
+    // GAS 미연결(데모모드) 또는 오류 → localStorage 폴백
+    STATE.reports = JSON.parse(localStorage.getItem('sg_reports') || '[]');
+  }
+  renderReportsPage();
+}
+
+function _saveReports() {
+  localStorage.setItem('sg_reports', JSON.stringify(STATE.reports || []));
+}
+
+function normalizeReport(r) {
+  return {
+    id: r.id || '', type: r.type || 'weekly',
+    date: r.date || '', yearMonth: r.yearMonth || '',
+    periodStart: r.periodStart || '', periodEnd: r.periodEnd || '',
+    total: r.total || '', disabled: r.disabled || '', nondisabled: r.nondisabled || '',
+    snackCnt: r.snackCnt || '', gardenCnt: r.gardenCnt || '', supportCnt: r.supportCnt || '',
+    hrChange: r.hrChange || '',
+    issueSnack: r.issueSnack || '', issueGarden: r.issueGarden || '', issueSupport: r.issueSupport || '',
+    planSnack: r.planSnack || '', planGarden: r.planGarden || '', planSupport: r.planSupport || '',
+    etc: r.etc || '',
+    monthContent: r.monthContent || '', monthAchieve: r.monthAchieve || '', monthImprove: r.monthImprove || '',
+    createdAt: r.createdAt || '', author: r.author || '',
+  };
+}
+
+function switchReportTab(tab, btn) {
+  _reportTab = tab;
+  // 버튼 스타일 (pill 형태)
+  const wb = document.getElementById('rpt-nav-weekly');
+  const mb = document.getElementById('rpt-nav-monthly');
+  if (wb) {
+    wb.style.background  = tab === 'weekly' ? 'var(--black)' : 'var(--white)';
+    wb.style.color       = tab === 'weekly' ? 'var(--yellow)' : 'var(--text-sub)';
+    wb.style.borderColor = tab === 'weekly' ? 'var(--black)' : 'var(--outline)';
+  }
+  if (mb) {
+    mb.style.background  = tab === 'monthly' ? 'var(--black)' : 'var(--white)';
+    mb.style.color       = tab === 'monthly' ? 'var(--yellow)' : 'var(--text-sub)';
+    mb.style.borderColor = tab === 'monthly' ? 'var(--black)' : 'var(--outline)';
+  }
+  // 목록 표시/숨김
+  document.getElementById('report-tab-weekly').style.display  = tab === 'weekly'  ? 'block' : 'none';
+  document.getElementById('report-tab-monthly').style.display = tab === 'monthly' ? 'block' : 'none';
+  // 카운트 배지
+  const wc = document.getElementById('report-week-cnt');
+  const mc = document.getElementById('report-month-cnt');
+  if (wc) wc.style.display = tab === 'weekly'  ? 'inline' : 'none';
+  if (mc) mc.style.display = tab === 'monthly' ? 'inline' : 'none';
+  // 월 탭 (주간만)
+  const mt = document.getElementById('report-month-tabs');
+  if (mt) mt.style.display = tab === 'weekly' ? 'flex' : 'none';
+  renderReportsPage();
+}
+
+function renderReportsPage() {
+  if (!STATE.reports) STATE.reports = JSON.parse(localStorage.getItem('sg_reports') || '[]');
+  _renderRptYearTabs();
+  _renderRptMonthTabs();
+  renderReportList();
+}
+
+const _MONTHS_KR_RPT = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+function _renderRptYearTabs() {
+  // 연도 탭 - report-year-tabs 하나만 사용 (주간/월간 공용)
+  const el = document.getElementById('report-year-tabs');
+  if (!el) return;
+  const curYear = new Date().getFullYear();
+  const years = [];
+  for (let y = REPORT_START_YEAR; y <= curYear + 1; y++) years.push(y);
+  el.innerHTML = years.map(y => `<button onclick="setReportYear(${y})"
+    style="padding:5px 12px;border-radius:99px;border:2px solid ${y===_reportYear?'var(--black)':'var(--outline)'};background:${y===_reportYear?'var(--black)':'var(--white)'};color:${y===_reportYear?'var(--yellow)':'var(--text-sub)'};font-size:.76rem;font-weight:900;cursor:pointer;transition:.15s">${y}년</button>`).join('');
+}
+
+function _renderRptMonthYearTabs() {
+  // 더 이상 별도 컨테이너 없음 - _renderRptYearTabs로 통합
+  _renderRptYearTabs();
+}
+
+function _renderRptMonthTabs() {
+  const el = document.getElementById('report-month-tabs');
+  if (!el || _reportTab !== 'weekly') return;
+  const reports = (STATE.reports || []).map(normalizeReport);
+  el.innerHTML = _MONTHS_KR_RPT.map((mn, i) => {
+    const mm = String(i + 1).padStart(2, '0');
+    const ym = `${_reportYear}-${mm}`;
+    const cnt = reports.filter(r => r.type === 'weekly' && r.yearMonth === ym).length;
+    const isActive = mm === _reportMonth;
+    return `<button onclick="setReportMonth('${mm}')"
+      style="padding:4px 10px;border-radius:99px;border:1.5px solid ${isActive?'var(--black)':'var(--outline)'};background:${isActive?'var(--black)':'var(--white)'};color:${isActive?'var(--yellow)':'var(--text-sub)'};font-size:.72rem;font-weight:${isActive?900:700};cursor:pointer;transition:.15s;position:relative">
+      ${mn}${cnt?`<span style="position:absolute;top:-5px;right:-4px;width:16px;height:16px;border-radius:50%;background:#D4A800;border:2px solid var(--white);font-size:.52rem;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--black)">${cnt}</span>`:''}
+    </button>`;
+  }).join('');
+}
+
+function setReportYear(y) { _reportYear = y; _renderRptYearTabs(); _renderRptMonthTabs(); renderReportList(); }
+function setReportMonth(mm) { _reportMonth = mm; _renderRptMonthTabs(); renderReportList(); }
+
+function renderReportList() {
+  const reports = (STATE.reports || []).map(normalizeReport);
+  const ym = `${_reportYear}-${_reportMonth}`;
+
+  if (_reportTab === 'weekly') {
+    const list = reports.filter(r => r.type === 'weekly' && r.yearMonth === ym)
+      .sort((a,b) => b.date > a.date ? 1 : -1);
+    const cntEl = document.getElementById('report-week-cnt');
+    if (cntEl) cntEl.textContent = list.length ? `${list.length}건` : '';
+    const el = document.getElementById('report-weekly-list');
+    if (!el) return;
+    if (!list.length) {
+      el.innerHTML = `<div class="card" style="padding:40px;text-align:center;color:var(--text-muted)">
+        <div style="font-size:1.6rem;margin-bottom:8px">📋</div>
+        <div style="font-size:.88rem;font-weight:700">${_reportYear}년 ${parseInt(_reportMonth)}월 주간 보고 없음</div>
+        <button onclick="openReportModal()" class="btn btn-primary" style="margin-top:14px">+ 주간 보고 작성</button>
+      </div>`;
+      return;
+    }
+    el.innerHTML = list.map(r => _renderWeeklyCard(r)).join('');
+  } else {
+    const list = reports.filter(r => r.type === 'monthly' && r.yearMonth.startsWith(String(_reportYear)))
+      .sort((a,b) => b.yearMonth > a.yearMonth ? 1 : -1);
+    const cntEl = document.getElementById('report-month-cnt');
+    if (cntEl) cntEl.textContent = list.length ? `${list.length}건` : '';
+    const el = document.getElementById('report-monthly-list');
+    if (!el) return;
+    if (!list.length) {
+      el.innerHTML = `<div class="card" style="padding:40px;text-align:center;color:var(--text-muted)">
+        <div style="font-size:1.6rem;margin-bottom:8px">📊</div>
+        <div style="font-size:.88rem;font-weight:700">${_reportYear}년 월간 보고 없음</div>
+        <button onclick="openReportModal('monthly')" class="btn btn-primary" style="margin-top:14px">+ 월간 보고 작성</button>
+      </div>`;
+      return;
+    }
+    el.innerHTML = list.map(r => _renderMonthlyCard(r)).join('');
+  }
+}
+
+function _renderWeeklyCard(r) {
+  const periodLabel = r.periodStart && r.periodEnd
+    ? `${r.periodStart.slice(5).replace('-','/')} ~ ${r.periodEnd.slice(5).replace('-','/')}`
+    : '';
+  const hrSummary = r.total
+    ? `총원 ${r.total}명 (장애 ${r.disabled||0} / 비장애 ${r.nondisabled||0}) · 🟡스낵 ${r.snackCnt||0}명 · 🟢가든 ${r.gardenCnt||0}명 · 🔵총무 ${r.supportCnt||0}명`
+    : '';
+
+  const partCol = (label, content, bg, bd, color) => {
+    if (!content) return `<div style="padding:12px 14px;background:${bg};border-right:1px solid var(--outline)"><div style="font-size:.68rem;font-weight:900;color:${color};margin-bottom:4px">${label}</div><div style="font-size:.74rem;color:var(--text-muted);font-style:italic">내용 없음</div></div>`;
+    const lines = content.split('\n').filter(Boolean);
+    return `<div style="padding:12px 14px;background:${bg};border-right:1px solid var(--outline)">
+      <div style="font-size:.68rem;font-weight:900;color:${color};margin-bottom:6px">${label}</div>
+      <div style="font-size:.76rem;color:var(--text-main);line-height:1.72">${lines.map(l=>`<div style="display:flex;gap:4px;margin-bottom:1px"><span style="color:${color};flex-shrink:0;margin-top:2px">•</span><span>${l.replace(/^[•·▸🔸🔹\-]\s*/,'')}</span></div>`).join('')}</div>
+    </div>`;
+  };
+
+  const planCol = (label, content, color) => {
+    if (!content) return `<div><div style="font-size:.66rem;font-weight:900;color:${color};margin-bottom:3px">${label}</div><div style="font-size:.72rem;color:var(--text-muted)">—</div></div>`;
+    const lines = content.split('\n').filter(Boolean);
+    return `<div>
+      <div style="font-size:.66rem;font-weight:900;color:${color};margin-bottom:4px">${label}</div>
+      <div style="font-size:.74rem;color:var(--text-sub);line-height:1.65">${lines.map(l=>`<div>• ${l.replace(/^[•·▸🔸🔹\-]\s*/,'')}</div>`).join('')}</div>
+    </div>`;
+  };
+
+  return `<div class="card" style="padding:0;overflow:hidden;border-left:4px solid var(--black)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--black);flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:.96rem;font-weight:900;color:var(--white)">${r.date} 스낵앤가든사업팀 주간 업무 보고</div>
+        ${periodLabel?`<div style="font-size:.76rem;color:rgba(255,255,255,.45);margin-top:3px">(${periodLabel})</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button onclick="editReport('${r.id}')" style="padding:4px 12px;border-radius:var(--r-sm);border:1.5px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.7);font-size:.72rem;font-weight:800;cursor:pointer;transition:.15s" onmouseover="this.style.background='var(--yellow)';this.style.color='var(--black)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,.7)'">✏️ 수정</button>
+        <button onclick="deleteReport('${r.id}')" style="padding:4px 12px;border-radius:var(--r-sm);border:1.5px solid #ba1a1a44;background:rgba(186,26,26,.15);color:#ff8a80;font-size:.72rem;font-weight:800;cursor:pointer">🗑 삭제</button>
+      </div>
+    </div>
+    ${hrSummary?`<div style="padding:8px 18px;background:rgba(254,229,0,.06);border-bottom:1px solid var(--outline);font-size:.76rem;font-weight:700;color:var(--text-main)">👥 ${hrSummary}</div>`:''}
+    ${r.hrChange?`<div style="padding:6px 18px;border-bottom:1px solid var(--outline);font-size:.74rem;color:var(--text-muted)">📌 ${r.hrChange}</div>`:''}
+    <div style="border-bottom:1px solid var(--outline)">
+      <div style="padding:7px 18px;font-size:.68rem;font-weight:900;color:var(--text-muted);letter-spacing:.06em;border-bottom:1px solid var(--outline);background:var(--surface-low)">2. 주요 운영 이슈 및 성과</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr">
+        ${partCol('🟡 스낵', r.issueSnack, 'var(--snack-bg)', 'var(--snack-border)', '#7A5F00')}
+        ${partCol('🟢 가든', r.issueGarden, 'var(--garden-bg)', 'var(--garden-border)', '#1B5E35')}
+        ${partCol('🔵 총무지원', r.issueSupport, 'var(--support-bg)', 'var(--support-border)', '#1A4F7A')}
+      </div>
+    </div>
+    <div style="padding:10px 18px;border-bottom:1px solid var(--outline);background:var(--surface-low)">
+      <div style="font-size:.68rem;font-weight:900;color:var(--text-muted);letter-spacing:.06em;margin-bottom:8px">3. 예정 업무</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        ${planCol('🟡 스낵', r.planSnack, '#D4A800')}
+        ${planCol('🟢 가든', r.planGarden, '#1D9E75')}
+        ${planCol('🔵 총무지원', r.planSupport, '#5B9BD5')}
+      </div>
+    </div>
+    ${r.etc?`<div style="padding:8px 18px;font-size:.74rem;color:var(--text-sub);line-height:1.65"><span style="font-weight:900;color:var(--text-muted)">기타</span> · ${r.etc}</div>`:''}
+  </div>`;
+}
+
+function _renderMonthlyCard(r) {
+  const [y, m] = r.yearMonth.split('-');
+  const monthLabel = `${y}년 ${_MONTHS_KR_RPT[parseInt(m)-1]}`;
+  return `<div class="card" style="padding:0;overflow:hidden;border-left:4px solid #5B9BD5">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--black);flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:.96rem;font-weight:900;color:var(--white)">${monthLabel} 월간 보고</div>
+        ${r.date?`<div style="font-size:.74rem;color:rgba(255,255,255,.45);margin-top:2px">보고일: ${r.date}</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="editReport('${r.id}')" style="padding:4px 12px;border-radius:var(--r-sm);border:1.5px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.7);font-size:.72rem;font-weight:800;cursor:pointer" onmouseover="this.style.background='var(--yellow)';this.style.color='var(--black)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,.7)'">✏️ 수정</button>
+        <button onclick="deleteReport('${r.id}')" style="padding:4px 12px;border-radius:var(--r-sm);background:rgba(186,26,26,.15);border:1.5px solid #ba1a1a44;color:#ff8a80;font-size:.72rem;font-weight:800;cursor:pointer">🗑 삭제</button>
+      </div>
+    </div>
+    <div style="padding:16px 18px">
+      ${r.monthContent?`<div style="font-size:.84rem;line-height:1.75;color:var(--text-main);margin-bottom:12px;white-space:pre-wrap">${r.monthContent}</div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${r.monthAchieve?`<div style="background:var(--garden-bg);border:1px solid var(--garden-border);border-radius:var(--r-sm);padding:10px 12px"><div style="font-size:.68rem;font-weight:900;color:var(--garden-text);margin-bottom:5px">✅ 주요 달성</div><div style="font-size:.78rem;line-height:1.65;white-space:pre-wrap">${r.monthAchieve}</div></div>`:''}
+        ${r.monthImprove?`<div style="background:var(--snack-bg);border:1px solid var(--snack-border);border-radius:var(--r-sm);padding:10px 12px"><div style="font-size:.68rem;font-weight:900;color:var(--snack-text);margin-bottom:5px">🔧 개선 과제</div><div style="font-size:.78rem;line-height:1.65;white-space:pre-wrap">${r.monthImprove}</div></div>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function openReportModal(preType) {
+  const rType = preType || 'weekly';
+  selectReportType(rType);
+  document.getElementById('rpt-id').value = '';
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  document.getElementById('rpt-date').value = todayStr;
+  document.getElementById('rpt-month-date').value = todayStr;
+  document.getElementById('rpt-month').value = todayStr.slice(0, 7);
+  const dow = today.getDay();
+  const mon = new Date(today); mon.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+  document.getElementById('rpt-period-start').value = mon.toISOString().slice(0, 10);
+  document.getElementById('rpt-period-end').value   = fri.toISOString().slice(0, 10);
+  ['rpt-total','rpt-disabled','rpt-nondisabled','rpt-snack-cnt','rpt-garden-cnt','rpt-support-cnt',
+   'rpt-hr-change','rpt-issue-snack','rpt-issue-garden','rpt-issue-support',
+   'rpt-plan-snack','rpt-plan-garden','rpt-plan-support','rpt-etc',
+   'rpt-month-content','rpt-month-achieve','rpt-month-improve'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('modal-report-title').textContent = rType === 'weekly' ? '주간 보고 작성' : '월간 보고 작성';
+  openModal('modal-report');
+}
+
+function selectReportType(type) {
+  document.getElementById('rpt-type').value = type;
+  const wb = document.getElementById('rpt-type-weekly');
+  const mb = document.getElementById('rpt-type-monthly');
+  wb.style.background  = type === 'weekly'  ? 'var(--black)' : 'var(--white)';
+  wb.style.color       = type === 'weekly'  ? 'var(--yellow)' : 'var(--text-sub)';
+  wb.style.borderColor = type === 'weekly'  ? 'var(--black)' : 'var(--outline)';
+  mb.style.background  = type === 'monthly' ? 'var(--black)' : 'var(--white)';
+  mb.style.color       = type === 'monthly' ? 'var(--yellow)' : 'var(--text-sub)';
+  mb.style.borderColor = type === 'monthly' ? 'var(--black)' : 'var(--outline)';
+  document.getElementById('rpt-weekly-form').style.display  = type === 'weekly'  ? 'block' : 'none';
+  document.getElementById('rpt-monthly-form').style.display = type === 'monthly' ? 'block' : 'none';
+  document.getElementById('modal-report-title').textContent = type === 'weekly' ? '주간 보고 작성' : '월간 보고 작성';
+}
+
+function editReport(id) {
+  if (!STATE.reports) STATE.reports = [];
+  const raw = STATE.reports.find(r => r.id === id);
+  if (!raw) return;
+  const r = normalizeReport(raw);
+  selectReportType(r.type);
+  document.getElementById('rpt-id').value = r.id;
+  document.getElementById('modal-report-title').textContent = r.type === 'weekly' ? '주간 보고 수정' : '월간 보고 수정';
+  if (r.type === 'weekly') {
+    document.getElementById('rpt-date').value          = r.date;
+    document.getElementById('rpt-period-start').value  = r.periodStart;
+    document.getElementById('rpt-period-end').value    = r.periodEnd;
+    document.getElementById('rpt-total').value         = r.total;
+    document.getElementById('rpt-disabled').value      = r.disabled;
+    document.getElementById('rpt-nondisabled').value   = r.nondisabled;
+    document.getElementById('rpt-snack-cnt').value     = r.snackCnt;
+    document.getElementById('rpt-garden-cnt').value    = r.gardenCnt;
+    document.getElementById('rpt-support-cnt').value   = r.supportCnt;
+    document.getElementById('rpt-hr-change').value     = r.hrChange;
+    document.getElementById('rpt-issue-snack').value   = r.issueSnack;
+    document.getElementById('rpt-issue-garden').value  = r.issueGarden;
+    document.getElementById('rpt-issue-support').value = r.issueSupport;
+    document.getElementById('rpt-plan-snack').value    = r.planSnack;
+    document.getElementById('rpt-plan-garden').value   = r.planGarden;
+    document.getElementById('rpt-plan-support').value  = r.planSupport;
+    document.getElementById('rpt-etc').value           = r.etc;
+  } else {
+    document.getElementById('rpt-month').value          = r.yearMonth;
+    document.getElementById('rpt-month-date').value     = r.date;
+    document.getElementById('rpt-month-content').value  = r.monthContent;
+    document.getElementById('rpt-month-achieve').value  = r.monthAchieve;
+    document.getElementById('rpt-month-improve').value  = r.monthImprove;
+  }
+  openModal('modal-report');
+}
+
+async function saveReport() {
+  const type = document.getElementById('rpt-type').value;
+  let data;
+  if (type === 'weekly') {
+    const date = document.getElementById('rpt-date').value;
+    if (!date) { toast('보고일을 입력하세요.', 'error'); return; }
+    data = {
+      id:          document.getElementById('rpt-id').value || 'rpt_' + Date.now(),
+      type, date,
+      yearMonth:   date.slice(0, 7),
+      periodStart: document.getElementById('rpt-period-start').value,
+      periodEnd:   document.getElementById('rpt-period-end').value,
+      total:       document.getElementById('rpt-total').value,
+      disabled:    document.getElementById('rpt-disabled').value,
+      nondisabled: document.getElementById('rpt-nondisabled').value,
+      snackCnt:    document.getElementById('rpt-snack-cnt').value,
+      gardenCnt:   document.getElementById('rpt-garden-cnt').value,
+      supportCnt:  document.getElementById('rpt-support-cnt').value,
+      hrChange:    document.getElementById('rpt-hr-change').value,
+      issueSnack:  document.getElementById('rpt-issue-snack').value,
+      issueGarden: document.getElementById('rpt-issue-garden').value,
+      issueSupport:document.getElementById('rpt-issue-support').value,
+      planSnack:   document.getElementById('rpt-plan-snack').value,
+      planGarden:  document.getElementById('rpt-plan-garden').value,
+      planSupport: document.getElementById('rpt-plan-support').value,
+      etc:         document.getElementById('rpt-etc').value,
+      createdAt:   new Date().toISOString().slice(0, 10),
+      author:      STATE.user?.name || '',
+    };
+  } else {
+    const ym = document.getElementById('rpt-month').value;
+    if (!ym) { toast('보고 년월을 선택하세요.', 'error'); return; }
+    data = {
+      id:           document.getElementById('rpt-id').value || 'rpt_' + Date.now(),
+      type, yearMonth: ym,
+      date:         document.getElementById('rpt-month-date').value,
+      monthContent: document.getElementById('rpt-month-content').value,
+      monthAchieve: document.getElementById('rpt-month-achieve').value,
+      monthImprove: document.getElementById('rpt-month-improve').value,
+      createdAt:    new Date().toISOString().slice(0, 10),
+      author:       STATE.user?.name || '',
+    };
+  }
+  if (!STATE.reports) STATE.reports = [];
+  const existIdx = STATE.reports.findIndex(r => r.id === data.id);
+
+  // GAS 저장 시도
+  try {
+    const res = await call('saveReport', data, STATE.user?.name || '');
+    if (res && res.success) {
+      // GAS가 발급한 id로 교체 (신규 시)
+      if (!data.id || data.id.startsWith('rpt_')) data.id = res.id;
+    }
+  } catch(e) {
+    // GAS 미연결 시 로컬 id 그대로 사용
+  }
+
+  // STATE + localStorage 업데이트
+  if (existIdx >= 0) STATE.reports[existIdx] = data;
+  else STATE.reports.push(data);
+  _saveReports();
+
+  toast('보고서가 저장되었습니다.');
+  closeModal('modal-report');
+  const parts = data.yearMonth.split('-');
+  _reportYear = parseInt(parts[0]);
+  _reportMonth = parts[1];
+  _reportTab = type;
+  switchReportTab(type, null);
+}
+
+function deleteReport(id) {
+  confirmDelete('이 보고서를 삭제하시겠습니까?', async () => {
+    // GAS 삭제 시도
+    try {
+      await call('deleteReport', id, STATE.user?.name || '');
+    } catch(e) {
+      // GAS 미연결 시 로컬에서만 삭제
+    }
+    STATE.reports = (STATE.reports || []).filter(x => x.id !== id);
+    _saveReports();
+    toast('삭제되었습니다.');
+    renderReportList();
+  });
+}
+/* ══════════════════════════════════════════════════════════════
+   ★ 일정 완료 상태 localStorage 영구 저장 헬퍼
+   GAS가 완료여부를 N으로 응답해도 로컬 체크 상태 유지
+══════════════════════════════════════════════════════════════ */
+function _saveSchDone(dateStr, scheduleId, isDone) {
+  if (!dateStr || !scheduleId) return;
+  const key = 'sg_sch_done_' + dateStr.slice(0, 7); // YYYY-MM 단위
+  try {
+    const map = JSON.parse(localStorage.getItem(key) || '{}');
+    if (isDone) map[scheduleId] = true;
+    else delete map[scheduleId];
+    localStorage.setItem(key, JSON.stringify(map));
+  } catch(e) {}
+}
+
+function _loadSchDone(dateStr, scheduleId) {
+  if (!dateStr || !scheduleId) return false;
+  const key = 'sg_sch_done_' + dateStr.slice(0, 7);
+  try {
+    const map = JSON.parse(localStorage.getItem(key) || '{}');
+    return !!map[scheduleId];
+  } catch(e) { return false; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   ★ 청구 관리 (BILLING)
+   - 월별 청구/미청구 배치표
+   - 청구처 × 파트 × 직무 × 크루 × 인원수 × mm × 비고
+   - 입사/퇴사/비고 섹션
+   - TO 요약 + 장애고용율 + 월별 장애고용율 테이블
+   - GAS 연동 (getBillingRecords / saveBillingRecord / deleteBillingRecord)
+   - localStorage 폴백
+══════════════════════════════════════════════════════════════ */
+
+const BILLING_START_YEAR = 2026;
+let _billingYear  = new Date().getFullYear() < BILLING_START_YEAR ? BILLING_START_YEAR : new Date().getFullYear();
+let _billingMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+let _billingEditMode = false;
+
+const BILLING_MONTHS_KR = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+// MM 계산 (직무명 기준)
+function calcMM(jobStr) {
+  const j = String(jobStr || '').toLowerCase();
+  if (j.includes('4h')) return 0.5;
+  return 1;
+}
+
+// 기본 데이터 키
+function billingKey(ym) { return 'sg_billing_' + ym; }
+function billingNoteKey(ym) { return 'sg_billing_note_' + ym; }
+function billingTOKey(year) { return 'sg_billing_to_' + year; }
+function billingMonthRateKey(year) { return 'sg_billing_mrate_' + year; }
+
+// ── 데이터 로드 ──
+async function loadBilling() {
+  _renderBillingYearTabs();
+  _renderBillingMonthTabs();
+  await _loadBillingData();
+  renderBillingPage();
+}
+
+async function _loadBillingData() {
+  const ym = `${_billingYear}-${_billingMonth}`;
+  try {
+    const res = await call('getBillingRecords', ym);
+    if (Array.isArray(res)) {
+      // GAS 데이터로 덮어쓰기 (항상 최신 유지)
+      _saveBillingRecords(ym, res);
+    }
+  } catch(e) {
+    // GAS 미연결 → localStorage 사용
+  }
+}
+
+// ── 연도/월 탭 렌더 ──
+function _renderBillingYearTabs() {
+  const el = document.getElementById('billing-year-tabs');
+  if (!el) return;
+  const curY = new Date().getFullYear();
+  const years = [];
+  for (let y = BILLING_START_YEAR; y <= curY + 1; y++) years.push(y);
+  el.innerHTML = years.map(y => `
+    <button onclick="setBillingYear(${y})"
+      style="padding:5px 12px;border-radius:99px;border:2px solid ${y===_billingYear?'var(--black)':'var(--outline)'};background:${y===_billingYear?'var(--black)':'var(--white)'};color:${y===_billingYear?'var(--yellow)':'var(--text-sub)'};font-size:.76rem;font-weight:900;cursor:pointer;transition:.15s">
+      ${y}년
+    </button>`).join('');
+}
+
+function _renderBillingMonthTabs() {
+  const el = document.getElementById('billing-month-tabs');
+  if (!el) return;
+  el.innerHTML = BILLING_MONTHS_KR.map((mn, i) => {
+    const mm = String(i + 1).padStart(2, '0');
+    const isActive = mm === _billingMonth;
+    const ym = `${_billingYear}-${mm}`;
+    const records = _getBillingRecords(ym);
+    const hasDot = records.length > 0;
+    return `<button onclick="setBillingMonth('${mm}')"
+      style="padding:4px 10px;border-radius:99px;border:1.5px solid ${isActive?'var(--black)':'var(--outline)'};background:${isActive?'var(--black)':'var(--white)'};color:${isActive?'var(--yellow)':'var(--text-sub)'};font-size:.72rem;font-weight:${isActive?900:700};cursor:pointer;transition:.15s;position:relative">
+      ${mn}${hasDot?`<span style="position:absolute;top:-3px;right:-3px;width:6px;height:6px;border-radius:50%;background:#1D9E75;border:1.5px solid var(--white)"></span>`:''}
+    </button>`;
+  }).join('');
+}
+
+function setBillingYear(y) {
+  _billingYear = y;
+  _renderBillingYearTabs();
+  _renderBillingMonthTabs();
+  renderBillingPage();
+}
+async function setBillingMonth(mm) {
+  _billingMonth = mm;
+  _renderBillingMonthTabs();
+  await _loadBillingData(); // 월 전환 시 GAS에서 최신 데이터 로드
+  renderBillingPage();
+}
+
+// ── 기록 가져오기 (localStorage) ──
+function _getBillingRecords(ym) {
+  try {
+    return JSON.parse(localStorage.getItem(billingKey(ym)) || '[]');
+  } catch(e) { return []; }
+}
+function _saveBillingRecords(ym, records) {
+  localStorage.setItem(billingKey(ym), JSON.stringify(records));
+}
+
+// ── 메인 렌더 ──
+function renderBillingPage() {
+  const ym = `${_billingYear}-${_billingMonth}`;
+  const monthIdx = parseInt(_billingMonth) - 1;
+
+  // 월 레이블
+  const lbl = document.getElementById('billing-month-label');
+  if (lbl) lbl.textContent = `${_billingMonth.replace(/^0/,'')}월`;
+
+  // 요약 배지
+  const records = _getBillingRecords(ym);
+  const billed   = records.filter(r => r.type !== 'unbilled');
+  const unbilled = records.filter(r => r.type === 'unbilled');
+  const badge = document.getElementById('billing-summary-badge');
+  if (badge) badge.textContent = records.length ? `청구 ${billed.length}건 · 미청구 ${unbilled.length}건` : '';
+
+  // 비고 로드
+  const noteEl = document.getElementById('billing-note-input');
+  if (noteEl) noteEl.value = localStorage.getItem(billingNoteKey(ym)) || '';
+
+  // TO 로드
+  const toEl = document.getElementById('billing-to-input');
+  const savedTO = parseInt(localStorage.getItem(billingTOKey(_billingYear))) || 34;
+  if (toEl) toEl.value = savedTO;
+
+  renderBillingTable(billed, 'billing-table-body', true);
+  renderBillingTable(unbilled, 'billing-unbilled-body', false);
+  renderBillingJoinResign(ym);
+  renderBillingRightPanel(records, savedTO, ym);
+}
+
+// ── 청구/미청구 표 렌더 ──
+function renderBillingTable(records, tbodyId, isBilled) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!records.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:${isBilled?32:16}px;color:var(--text-muted);font-size:.82rem">${isBilled?'청구 기록 없음':'미청구 인원 없음'}</td></tr>`;
+    return;
+  }
+
+  // 청구처별 그룹핑
+  const groups = {};
+  records.forEach(r => {
+    const site = r.site || '미지정';
+    if (!groups[site]) groups[site] = [];
+    groups[site].push(r);
+  });
+
+  let totalHead = 0, totalMM = 0;
+  let rows = '';
+
+  Object.entries(groups).forEach(([site, siteRecs]) => {
+    let siteHead = 0, siteMM = 0;
+    const siteRows = siteRecs.map((r, ri) => {
+      const cnt = parseInt(r.headcount) || (r.crews ? r.crews.split(',').filter(Boolean).length : 0);
+      const mm  = parseFloat(r.mm) || (cnt * calcMM(r.job));
+      siteHead += cnt; siteMM += mm;
+      const isFirst = ri === 0;
+      const isLast  = ri === siteRecs.length - 1;
+      const crewHtml = (r.crews || '').split(',').map(c => c.trim()).filter(Boolean).map(c =>
+        `<span style="font-size:.78rem;font-weight:600;color:var(--text-main);cursor:pointer;margin-right:4px"
+          onmouseover="this.style.color='#1A4F7A';this.style.textDecoration='underline'"
+          onmouseout="this.style.color='';this.style.textDecoration=''">${c}</span>`
+      ).join('');
+
+      return `<tr style="border-bottom:${isLast?'2px solid #bbb':'1px solid #eee'}">
+        ${isFirst ? `<td rowspan="${siteRecs.length}" style="padding:6px 12px;font-weight:900;border-right:1px solid #ddd;vertical-align:middle;background:#fafafa">${site}</td>` : ''}
+        <td style="padding:5px 10px;border-right:1px solid #eee;font-size:.76rem;color:var(--text-muted);font-weight:700;white-space:nowrap">${r.part || ''}</td>
+        <td style="padding:5px 10px;border-right:1px solid #eee;font-size:.76rem;color:#888;white-space:nowrap">${r.job || ''}</td>
+        <td style="padding:5px 8px;border-right:1px solid #eee">${crewHtml}</td>
+        <td style="padding:5px 8px;text-align:center;border-right:1px solid #eee;font-weight:800">${cnt}</td>
+        <td style="padding:5px 8px;text-align:center;border-right:1px solid #eee;font-size:.78rem;color:var(--text-muted)">${mm % 1 === 0 ? mm : mm.toFixed(1)}</td>
+        <td style="padding:5px 8px;border-right:1px solid #eee;font-size:.74rem;color:#ba1a1a">${r.note || ''}</td>
+        <td style="padding:4px 6px;text-align:center">
+          <div style="display:flex;gap:3px;justify-content:center">
+            <button onclick="editBillingRecord('${r.id}')" title="수정"
+              style="padding:2px 6px;border-radius:4px;border:1.5px solid var(--outline);background:var(--white);font-size:.65rem;cursor:pointer;font-weight:800">✏️</button>
+            <button onclick="deleteBillingRecord('${r.id}')" title="삭제"
+              style="padding:2px 6px;border-radius:4px;background:var(--error-bg);border:none;color:var(--error-text);font-size:.65rem;cursor:pointer;font-weight:800">✕</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    rows += siteRows;
+    // 청구처 소계
+    rows += `<tr style="background:#f8f8f8;border-bottom:2px solid #bbb">
+      <td colspan="6" style="padding:4px 10px;text-align:right;font-size:.74rem;color:var(--text-muted);font-weight:800">소계</td>
+      <td style="padding:4px 8px;text-align:center;font-weight:900;color:#ba1a1a;font-size:.86rem">${siteHead}</td>
+      <td style="padding:4px 8px;text-align:center;font-size:.78rem;color:var(--text-muted)">${siteMM % 1 === 0 ? siteMM : siteMM.toFixed(1)}</td>
+      <td></td>
+    </tr>`;
+
+    totalHead += siteHead; totalMM += siteMM;
+  });
+
+  // 전체 합계
+  rows += `<tr style="background:#f0f0f0;border-top:2px solid #999">
+    <td colspan="6" style="padding:5px 10px;text-align:right;font-weight:900">소계</td>
+    <td style="padding:5px 8px;text-align:center;font-weight:900;font-size:.9rem;color:#ba1a1a">${totalHead}</td>
+    <td style="padding:5px 8px;text-align:center;font-weight:900;font-size:.84rem;color:var(--text-sub)">${totalMM % 1 === 0 ? totalMM : totalMM.toFixed(1)}</td>
+    <td style="padding:5px 8px;text-align:center">
+      <button onclick="openBillingRecordModal(null,'${isBilled?'billed':'unbilled'}')"
+        style="padding:2px 8px;border-radius:4px;border:1.5px dashed var(--outline);background:transparent;color:var(--text-muted);font-size:.68rem;font-weight:800;cursor:pointer">+ 추가</button>
+    </td>
+  </tr>`;
+
+  tbody.innerHTML = rows;
+}
+
+// ── 우측 패널: TO 요약 + 장애고용율 ──
+function renderBillingRightPanel(records, to, ym) {
+  const billed = records.filter(r => r.type !== 'unbilled');
+
+  // 헤드카운트 합산
+  let total8hDis = 0, total8hNonDis = 0, total4hDis = 0;
+  let totalDis = 0, totalNonDis = 0;
+
+  billed.forEach(r => {
+    const cnt = parseInt(r.headcount) || (r.crews ? r.crews.split(',').filter(Boolean).length : 0);
+    const isDis = (r.disType || '').includes('장애') || (r.job || '').includes('장애');
+    const is4h  = (r.job || '').includes('4h');
+    if (isDis && is4h)  total4hDis  += cnt;
+    else if (isDis)     total8hDis  += cnt;
+    else if (!is4h)     total8hNonDis += cnt;
+    if (isDis)   totalDis   += cnt;
+    else         totalNonDis += cnt;
+  });
+  const totalCurrent = totalDis + totalNonDis;
+  const toDiff = totalCurrent - to;
+  const disRate = totalCurrent ? Math.round(totalDis / totalCurrent * 100) : 0;
+
+  // TO 요약
+  const summaryEl = document.getElementById('billing-to-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <table style="border-collapse:collapse;width:100%;font-size:.78rem">
+        <tr style="border-bottom:1px solid #f0f0f0"><td style="padding:4px 12px;color:var(--text-muted)">8h 비장애</td><td style="padding:4px 12px;font-weight:800;text-align:right">${total8hNonDis}</td></tr>
+        <tr style="border-bottom:1px solid #f0f0f0"><td style="padding:4px 12px;color:var(--text-muted)">8h 장애</td><td style="padding:4px 12px;font-weight:800;text-align:right">${total8hDis}</td></tr>
+        <tr style="border-bottom:1px solid #f0f0f0"><td style="padding:4px 12px;color:var(--text-muted)">4h 장애</td><td style="padding:4px 12px;font-weight:800;text-align:right">${total4hDis}</td></tr>
+        <tr style="border-bottom:2px solid #ccc;background:#f8f8f8"><td style="padding:5px 12px;font-weight:900">현 인원</td><td style="padding:5px 12px;font-weight:900;background:#B8D4EA;color:#1A4F7A;text-align:right">${totalCurrent}</td></tr>
+        <tr style="background:#f8f8f8"><td style="padding:4px 12px;font-weight:900">영입 TO</td><td style="padding:4px 12px;font-weight:900;background:${toDiff<0?'#FFB3B3':'#B8D4EA'};color:${toDiff<0?'#ba1a1a':'#1A4F7A'};text-align:right">${toDiff >= 0 ? '+'+toDiff : toDiff}</td></tr>
+        <tr style="border-top:1px solid #ddd"><td style="padding:4px 12px;font-size:.74rem;color:var(--text-muted)">비장애</td><td style="padding:4px 12px;font-weight:800;background:#FFF9C4;text-align:right">${totalNonDis}</td></tr>
+        <tr><td style="padding:4px 12px;font-size:.74rem;color:var(--text-muted)">장애</td><td style="padding:4px 12px;font-weight:800;background:#E8F5E9;text-align:right">${totalDis}</td></tr>
+        <tr style="border-top:1px solid #ddd"><td style="padding:4px 12px;font-weight:700">장애고용율</td><td style="padding:4px 12px;font-weight:900;text-align:right">${disRate}%</td></tr>
+      </table>`;
+  }
+
+  // 장애고용율 상세
+  const disEl = document.getElementById('billing-dis-rate');
+  if (disEl) {
+    disEl.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:.76rem;color:var(--text-muted)">비장애</span>
+        <span style="font-weight:900;font-size:.84rem">${totalNonDis}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:.76rem;color:var(--text-muted)">장애</span>
+        <span style="font-weight:900;font-size:.84rem">${totalDis}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;margin-top:2px">
+        <span style="font-size:.76rem;font-weight:800">장애고용율</span>
+        <span style="font-size:1.1rem;font-weight:900;color:#ba1a1a">${disRate}%</span>
+      </div>
+      <div style="height:6px;background:var(--surface-high);border-radius:99px;overflow:hidden;margin-top:4px">
+        <div style="width:${disRate}%;height:100%;background:#ba1a1a;border-radius:99px;transition:width .5s ease"></div>
+      </div>`;
+  }
+
+  // 월별 장애고용율 테이블
+  const rateKey = billingMonthRateKey(_billingYear);
+  const savedRates = JSON.parse(localStorage.getItem(rateKey) || '[]');
+  // 이번 달 자동 업데이트
+  const mIdx = parseInt(_billingMonth) - 1;
+  if (!savedRates[mIdx] && disRate > 0) {
+    savedRates[mIdx] = disRate + '%';
+    localStorage.setItem(rateKey, JSON.stringify(savedRates));
+  }
+
+  const rateYearLbl = document.getElementById('billing-rate-year-label');
+  if (rateYearLbl) rateYearLbl.textContent = _billingYear;
+
+  const monthlyEl = document.getElementById('billing-monthly-rate');
+  if (monthlyEl) {
+    monthlyEl.innerHTML = `
+      <table style="border-collapse:collapse;min-width:100%;font-size:.7rem">
+        <thead><tr style="background:#f0f0f0">
+          ${Array.from({length:12},(_,i)=>`<th style="padding:3px 5px;border:1px solid #ddd;font-weight:700;text-align:center;min-width:28px">${i+1}월</th>`).join('')}
+        </thead>
+        <tbody><tr>
+          ${Array.from({length:12},(_,i)=>{
+            const val = savedRates[i] || '';
+            return `<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:${val?800:400};cursor:pointer"
+              contenteditable="false"
+              ondblclick="this.contentEditable='true';this.focus();this.style.background='rgba(186,26,26,.1)'"
+              onblur="saveBillingMonthRate(${i},this.textContent)">${val}</td>`;
+          }).join('')}
+        </tr></tbody>
+      </table>
+      <div style="text-align:right;padding:4px 0 0;font-size:.68rem;font-weight:800;color:#ba1a1a">${_billingYear}년도 장애고용율: ${disRate}%</div>`;
+  }
+}
+
+// ── 입사/퇴사 렌더 ──
+function renderBillingJoinResign(ym) {
+  const joinKey   = 'sg_billing_join_' + ym;
+  const resignKey = 'sg_billing_resign_' + ym;
+  const joins   = JSON.parse(localStorage.getItem(joinKey) || '[]');
+  const resigns = JSON.parse(localStorage.getItem(resignKey) || '[]');
+
+  const joinEl  = document.getElementById('billing-join-list');
+  const resignEl = document.getElementById('billing-resign-list');
+
+  const renderRow = (item, type, key, idx) => `
+    <div style="display:flex;align-items:center;padding:3px 12px;gap:6px;border-bottom:1px solid ${type==='join'?'rgba(125,201,154,.2)':'rgba(186,26,26,.15)'}">
+      <span contenteditable="true" style="flex:1;font-size:.8rem;font-weight:700;outline:none;min-width:40px"
+        onblur="updateBillingPerson('${type}','${key}',${idx},'name',this.textContent)">${item.name || '이름'}</span>
+      <span contenteditable="true" style="font-size:.72rem;color:${type==='join'?'#2E7D52':'#ba1a1a'};outline:none"
+        onblur="updateBillingPerson('${type}','${key}',${idx},'date',this.textContent)">${item.date || '날짜'}</span>
+      <button onclick="deleteBillingPerson('${type}','${key}',${idx})"
+        style="border:none;background:transparent;color:#ccc;font-size:.65rem;cursor:pointer;flex-shrink:0">✕</button>
+    </div>`;
+
+  if (joinEl) {
+    const emptyEl = document.getElementById('billing-join-empty');
+    joinEl.innerHTML = joins.length
+      ? joins.map((item, i) => renderRow(item, 'join', joinKey, i)).join('')
+      : '<div style="padding:6px 12px;font-size:.76rem;color:#7DC99A">없음</div>';
+  }
+  if (resignEl) {
+    resignEl.innerHTML = resigns.length
+      ? resigns.map((item, i) => renderRow(item, 'resign', resignKey, i)).join('')
+      : '<div style="padding:6px 12px;font-size:.76rem;color:#ba1a1a">없음</div>';
+  }
+}
+
+function addBillingJoinRow() {
+  const ym = `${_billingYear}-${_billingMonth}`;
+  const key = 'sg_billing_join_' + ym;
+  const list = JSON.parse(localStorage.getItem(key) || '[]');
+  list.push({ name: '이름', date: '날짜' });
+  localStorage.setItem(key, JSON.stringify(list));
+  renderBillingJoinResign(ym);
+}
+function addBillingResignRow() {
+  const ym = `${_billingYear}-${_billingMonth}`;
+  const key = 'sg_billing_resign_' + ym;
+  const list = JSON.parse(localStorage.getItem(key) || '[]');
+  list.push({ name: '이름', date: '날짜' });
+  localStorage.setItem(key, JSON.stringify(list));
+  renderBillingJoinResign(ym);
+}
+function updateBillingPerson(type, key, idx, field, val) {
+  const list = JSON.parse(localStorage.getItem(key) || '[]');
+  if (list[idx]) { list[idx][field] = val.trim(); localStorage.setItem(key, JSON.stringify(list)); }
+}
+function deleteBillingPerson(type, key, idx) {
+  const list = JSON.parse(localStorage.getItem(key) || '[]');
+  list.splice(idx, 1);
+  localStorage.setItem(key, JSON.stringify(list));
+  renderBillingJoinResign(`${_billingYear}-${_billingMonth}`);
+}
+
+function saveBillingNote() {
+  const ym  = `${_billingYear}-${_billingMonth}`;
+  const val = document.getElementById('billing-note-input')?.value || '';
+  localStorage.setItem(billingNoteKey(ym), val);
+}
+function saveBillingTO(val) {
+  localStorage.setItem(billingTOKey(_billingYear), val);
+  renderBillingPage();
+}
+function saveBillingMonthRate(idx, val) {
+  const rateKey = billingMonthRateKey(_billingYear);
+  const rates = JSON.parse(localStorage.getItem(rateKey) || '[]');
+  rates[idx] = val.trim();
+  localStorage.setItem(rateKey, JSON.stringify(rates));
+  document.querySelectorAll('#billing-monthly-rate td')[idx].contentEditable = 'false';
+  document.querySelectorAll('#billing-monthly-rate td')[idx].style.background = '';
+}
+
+// ── 수정 모드 토글 ──
+function toggleBillingEditMode() {
+  _billingEditMode = !_billingEditMode;
+  const editBtn = document.getElementById('billing-edit-btn');
+  const saveBtn = document.getElementById('billing-save-btn');
+  if (_billingEditMode) {
+    if (editBtn) { editBtn.textContent = '✕ 취소'; editBtn.style.borderColor = 'rgba(255,80,80,.6)'; editBtn.style.color = '#ffaaaa'; }
+    if (saveBtn) saveBtn.style.display = 'inline-block';
+    toast('수정 모드 ON — 내용 클릭 후 편집 가능');
+  } else {
+    if (editBtn) { editBtn.textContent = '✏️ 수정 모드'; editBtn.style.borderColor = 'rgba(255,255,255,.25)'; editBtn.style.color = 'rgba(255,255,255,.6)'; }
+    if (saveBtn) saveBtn.style.display = 'none';
+  }
+}
+
+async function saveBillingData() {
+  const ym = `${_billingYear}-${_billingMonth}`;
+  const records = _getBillingRecords(ym);
+  let savedCnt = 0;
+  try {
+    // 각 기록을 개별 저장 (누적 보장)
+    for (const record of records) {
+      const res = await call('saveBillingRecord', record, STATE.user?.name || '');
+      if (res && res.success) savedCnt++;
+    }
+    toast(`✅ ${ym} 청구 데이터 ${savedCnt}건 저장됨`);
+  } catch(e) {
+    toast('로컬 저장됨 (GAS 미연결)');
+  }
+  _billingEditMode = false;
+  toggleBillingEditMode();
+  renderBillingPage();
+}
+
+// ── 기록 추가/수정 모달 ──
+function openBillingRecordModal(id, defaultType) {
+  const ym = `${_billingYear}-${_billingMonth}`;
+  const records = _getBillingRecords(ym);
+  const d = id ? records.find(r => r.id === id) : null;
+
+  const modalHtml = `
+    <div class="modal-overlay show" id="modal-billing-record" onclick="if(event.target===this)closeModal('modal-billing-record')">
+      <div class="modal" style="width:min(560px,100%)">
+        <div class="modal-header">
+          <span class="modal-title">${d ? '청구 기록 수정' : '청구 기록 등록'}</span>
+          <button class="modal-close" onclick="closeModal('modal-billing-record')">✕</button>
+        </div>
+        <div class="modal-body">
+          <!-- 청구/미청구 선택 -->
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <button id="br-type-billed" onclick="selectBillingType('billed')"
+              style="flex:1;padding:8px;border-radius:var(--r-sm);border:2px solid var(--black);background:var(--black);color:var(--yellow);font-size:.8rem;font-weight:900;cursor:pointer">청구</button>
+            <button id="br-type-unbilled" onclick="selectBillingType('unbilled')"
+              style="flex:1;padding:8px;border-radius:var(--r-sm);border:2px solid var(--outline);background:var(--white);color:var(--text-sub);font-size:.8rem;font-weight:800;cursor:pointer">미청구</button>
+          </div>
+          <input type="hidden" id="br-type-val" value="${d?.type || defaultType || 'billed'}"/>
+          <div class="form-grid" style="margin-bottom:12px">
+            <div class="field"><label>청구처 *</label><input id="br-site" value="${d?.site||''}" placeholder="카카오, 카카오모빌리티 등"/></div>
+            <div class="field"><label>파트</label><select id="br-part">
+              <option value="스낵" ${d?.part==='스낵'?'selected':''}>🟡 스낵</option>
+              <option value="가든" ${d?.part==='가든'?'selected':''}>🟢 가든</option>
+              <option value="총무지원" ${d?.part==='총무지원'?'selected':''}>🔵 총무지원</option>
+            </select></div>
+            <div class="field"><label>직무 *</label><input id="br-job" value="${d?.job||''}" placeholder="8h 비장애, 4h 장애, 8h 장애 등"/></div>
+            <div class="field"><label>장애구분</label><select id="br-dis">
+              <option value="비장애" ${d?.disType==='비장애'?'selected':''}>비장애</option>
+              <option value="장애" ${(d?.disType||'').includes('장애')&&!d?.disType?.includes('비장애')?'selected':''}>장애</option>
+            </select></div>
+          </div>
+          <div class="field" style="margin-bottom:12px">
+            <label>크루 이름 <span style="font-size:.68rem;color:var(--text-muted);font-weight:600">쉼표로 구분</span></label>
+            <textarea id="br-crews" rows="3" style="width:100%;min-height:70px"
+              placeholder="홍길동, 김철수, 이영희…">${d?.crews||''}</textarea>
+          </div>
+          <div class="form-grid" style="margin-bottom:12px">
+            <div class="field"><label>인원수 <span style="font-size:.66rem;color:var(--text-muted)">비우면 크루수 자동계산</span></label>
+              <input type="number" id="br-headcount" value="${d?.headcount||''}" min="0" placeholder="자동"/></div>
+            <div class="field"><label>mm <span style="font-size:.66rem;color:var(--text-muted)">비우면 자동계산</span></label>
+              <input type="number" id="br-mm" step="0.5" value="${d?.mm||''}" min="0" placeholder="자동"/></div>
+          </div>
+          <div class="field" style="margin-bottom:14px">
+            <label>비고</label>
+            <input id="br-note" value="${d?.note||''}" placeholder="육아휴직, 파견 등"/>
+          </div>
+          <input type="hidden" id="br-id" value="${d?.id||''}"/>
+          <div class="form-actions">
+            <button class="btn btn-outline" onclick="closeModal('modal-billing-record')">취소</button>
+            <button class="btn btn-primary" onclick="saveBillingRecord()">저장</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // 기존 모달 제거 후 삽입
+  document.getElementById('modal-billing-record')?.remove();
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  // 타입 초기 선택
+  selectBillingType(d?.type || defaultType || 'billed');
+}
+
+function selectBillingType(type) {
+  document.getElementById('br-type-val').value = type;
+  const billedBtn   = document.getElementById('br-type-billed');
+  const unbilledBtn = document.getElementById('br-type-unbilled');
+  if (billedBtn) {
+    billedBtn.style.background   = type === 'billed' ? 'var(--black)' : 'var(--white)';
+    billedBtn.style.color        = type === 'billed' ? 'var(--yellow)' : 'var(--text-sub)';
+    billedBtn.style.borderColor  = type === 'billed' ? 'var(--black)' : 'var(--outline)';
+  }
+  if (unbilledBtn) {
+    unbilledBtn.style.background  = type === 'unbilled' ? 'var(--black)' : 'var(--white)';
+    unbilledBtn.style.color       = type === 'unbilled' ? 'var(--yellow)' : 'var(--text-sub)';
+    unbilledBtn.style.borderColor = type === 'unbilled' ? 'var(--black)' : 'var(--outline)';
+  }
+}
+
+async function saveBillingRecord() {
+  const site = document.getElementById('br-site').value.trim();
+  const job  = document.getElementById('br-job').value.trim();
+  if (!site) { toast('청구처를 입력하세요.', 'error'); return; }
+  if (!job)  { toast('직무를 입력하세요.', 'error'); return; }
+
+  const crewsVal    = document.getElementById('br-crews').value.trim();
+  const crewList    = crewsVal.split(',').map(c => c.trim()).filter(Boolean);
+  const headcountVal = parseInt(document.getElementById('br-headcount').value) || crewList.length || 0;
+  const mmVal        = parseFloat(document.getElementById('br-mm').value) || (headcountVal * calcMM(job));
+
+  const existId = document.getElementById('br-id').value;
+  const record = {
+    id:        existId || 'bl_' + Date.now(),
+    type:      document.getElementById('br-type-val').value,
+    site,
+    part:      document.getElementById('br-part').value,
+    job,
+    disType:   document.getElementById('br-dis').value,
+    crews:     crewsVal,
+    headcount: headcountVal,
+    mm:        mmVal,
+    note:      document.getElementById('br-note').value.trim(),
+    ym:        `${_billingYear}-${_billingMonth}`,
+    createdAt: new Date().toISOString().slice(0, 10),
+  };
+
+  const ym = `${_billingYear}-${_billingMonth}`;
+  const records = _getBillingRecords(ym);
+  const idx = records.findIndex(r => r.id === record.id);
+  if (idx >= 0) records[idx] = record; else records.push(record);
+  _saveBillingRecords(ym, records);
+
+  // GAS 저장 시도 (서버 ID로 교체)
+  try {
+    const res = await call('saveBillingRecord', record, STATE.user?.name || '');
+    if (res && res.success && res.id) {
+      // GAS 발급 ID로 교체
+      const recs = _getBillingRecords(ym);
+      const ri = recs.findIndex(r => r.id === record.id);
+      if (ri >= 0) { recs[ri].id = res.id; record.id = res.id; }
+      _saveBillingRecords(ym, recs);
+    }
+  } catch(e) {
+    // GAS 미연결 → localStorage ID 유지
+  }
+
+  toast('✅ 저장되었습니다.');
+  closeModal('modal-billing-record');
+  renderBillingPage();
+  _renderBillingMonthTabs();
+}
+
+function editBillingRecord(id) { openBillingRecordModal(id); }
+
+function deleteBillingRecord(id) {
+  const ym = `${_billingYear}-${_billingMonth}`;
+  const records = _getBillingRecords(ym);
+  const r = records.find(x => x.id === id);
+  confirmDelete(`<strong>${r?.site || ''} ${r?.job || ''}</strong> 기록을 삭제하시겠습니까?`, async () => {
+    const updated = records.filter(x => x.id !== id);
+    _saveBillingRecords(ym, updated);
+    try {
+      await call('deleteBillingRecord', id, STATE.user?.name || '');
+    } catch(e) {
+      // GAS 미연결 → 로컬에서만 삭제
+    }
+    toast('삭제되었습니다.');
+    renderBillingPage();
+    _renderBillingMonthTabs();
+  });
+}
+
+// ── 내보내기 (클립보드) ──
+function exportBillingReport() {
+  const ym      = `${_billingYear}-${_billingMonth}`;
+  const records = _getBillingRecords(ym);
+  const billed  = records.filter(r => r.type !== 'unbilled');
+  const unbilled = records.filter(r => r.type === 'unbilled');
+  const note    = localStorage.getItem(billingNoteKey(ym)) || '';
+
+  let text = `[스낵앤가든사업팀 청구 관리] ${ym}\n`;
+  text += '='.repeat(50) + '\n\n';
+  text += '[청구]\n';
+  billed.forEach(r => {
+    text += `${r.site}  ${r.part || ''}  ${r.job}  ${r.crews}  (${r.headcount}명 / ${r.mm}mm)${r.note ? '  ※' + r.note : ''}\n`;
+  });
+  if (unbilled.length) {
+    text += '\n[미청구]\n';
+    unbilled.forEach(r => {
+      text += `${r.site}  ${r.part || ''}  ${r.job}  ${r.crews}  (${r.headcount}명)${r.note ? '  ※' + r.note : ''}\n`;
+    });
+  }
+  if (note) text += `\n[비고]\n${note}\n`;
+
+  navigator.clipboard?.writeText(text).then(() => toast('📋 청구 보고서가 클립보드에 복사됐습니다!'))
+    .catch(() => toast('복사 실패 — 직접 선택해주세요.', 'error'));
+}
+
+// ── 데모모드 GAS 폴백 추가 ──
+// (demoCall에 getBillingRecords/saveBillingRecord/deleteBillingRecord 없으면 null 반환 → localStorage로 처리)
+
 
 </script>
 </body>
